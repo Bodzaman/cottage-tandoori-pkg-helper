@@ -8,60 +8,50 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - os: windows-latest
-            target: node18-win-x64
-            artifact: cottage-tandoori-helper-windows.exe
-          - os: macos-latest
-            target: node18-macos-x64
-            artifact: cottage-tandoori-helper-mac
           - os: ubuntu-latest
             target: node18-linux-x64
-            artifact: cottage-tandoori-helper-linux
+            output: cottage-tandoori-helper-linux
+          - os: macos-latest
+            target: node18-macos-x64
+            output: cottage-tandoori-helper-mac
+          - os: windows-latest
+            target: node18-win-x64
+            output: cottage-tandoori-helper-windows.exe
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Install PKG globally
-        run: npm install -g pkg
+      - name: Build PKG executable
+        run: npx pkg . --target ${{ matrix.target }} --output ${{ matrix.output }} --compress Brotli
 
-      - name: Build executable
-        run: pkg . --targets ${{ matrix.target }} --output ./dist/${{ matrix.artifact }} --compress Brotli
-
-      - name: Upload artifact
+      - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: ./dist/${{ matrix.artifact }}
+          name: ${{ matrix.output }}
+          path: ${{ matrix.output }}
 
-  release:
+  # Create release manually when needed - artifacts are always available
+  success:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            cottage-tandoori-helper-windows.exe/cottage-tandoori-helper-windows.exe
-            cottage-tandoori-helper-mac/cottage-tandoori-helper-mac
-            cottage-tandoori-helper-linux/cottage-tandoori-helper-linux
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Success
+        run: |
+          echo "✅ All PKG executables built successfully!"
+          echo "📦 Download artifacts from this build"
+          echo "🚀 Ready for restaurant deployment"
