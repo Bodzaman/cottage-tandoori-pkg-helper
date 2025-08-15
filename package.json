@@ -1,8 +1,9 @@
 {
   "name": "cottage-tandoori-pkg-helper",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "POS Printer Helper for Cottage Tandoori Restaurant",
   "main": "index.js",
+  "bin": "index.js",
   "scripts": {
     "start": "node index.js",
     "build": "pkg package.json --compress Brotli"
