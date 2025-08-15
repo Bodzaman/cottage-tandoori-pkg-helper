@@ -8,78 +8,56 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - target: node18-win-x64
-            platform: windows
-            ext: .exe
-          - target: node18-macos-x64
-            platform: macos
-            ext: ''
-          - target: node18-linux-x64
-            platform: linux
-            ext: ''
+          - os: windows-latest
+            target: node18-win-x64
+            artifact: cottage-tandoori-helper-windows.exe
+          - os: macos-latest
+            target: node18-macos-x64
+            artifact: cottage-tandoori-helper-mac
+          - os: ubuntu-latest
+            target: node18-linux-x64
+            artifact: cottage-tandoori-helper-linux
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install PKG globally
         run: npm install -g pkg
 
       - name: Build executable
-        run: |
-          pkg package.json --target ${{ matrix.target }} --compress Brotli --output cottage-tandoori-helper-${{ matrix.platform }}${{ matrix.ext }}
+        run: pkg . --targets ${{ matrix.target }} --output ./dist/${{ matrix.artifact }} --compress Brotli
 
-      - name: Upload executable
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cottage-tandoori-helper-${{ matrix.platform }}
-          path: cottage-tandoori-helper-${{ matrix.platform }}${{ matrix.ext }}
-          retention-days: 90
+          name: ${{ matrix.artifact }}
+          path: ./dist/${{ matrix.artifact }}
 
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    
+    if: startsWith(github.ref, 'refs/tags/')
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-        with:
-          path: artifacts
 
-      - name: Create release
-        uses: softprops/action-gh-release@v1
+      - name: Create Release
+        uses: ncipollo/create-release@v1
         with:
-          files: artifacts/**/*
-          body: |
-            ## Cottage Tandoori PKG Helper ${{ github.ref_name }}
-            
-            **Node.js-based printer helper for Cottage Tandoori Restaurant**
-            
-            ### Downloads:
-            - `cottage-tandoori-helper-windows.exe` - Windows executable (30-50MB)
-            - `cottage-tandoori-helper-macos` - macOS executable (30-50MB)  
-            - `cottage-tandoori-helper-linux` - Linux executable (30-50MB)
-            
-            ### Usage:
-            1. Download the appropriate file for your platform
-            2. Double-click to run (starts on localhost:3001)
-            3. Use for POS printing and restaurant operations
-            
-            Built with PKG + Node.js 18 + Brotli compression
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: "cottage-tandoori-helper-windows.exe/cottage-tandoori-helper-windows.exe,cottage-tandoori-helper-mac/cottage-tandoori-helper-mac,cottage-tandoori-helper-linux/cottage-tandoori-helper-linux"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generateReleaseNotes: true
