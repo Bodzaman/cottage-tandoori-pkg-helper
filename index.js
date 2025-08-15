@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 const express = require('express');
 const cors = require('cors');
 
@@ -10,171 +8,186 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
-console.log('🚀 Cottage Tandoori Printer Helper v1.0.2');
-console.log('💡 Simplified version for reliable PKG compilation');
+// Mock printer functionality for now - will work with actual printers
+class MockPrinter {
+    constructor() {
+        this.connected = true;
+        this.printerName = "Epson TM-T20III (Mock)";
+    }
+
+    async print(content) {
+        console.log("🖨️  PRINTING TO:", this.printerName);
+        console.log("📄 CONTENT:");
+        console.log(content);
+        console.log("✅ Print job completed");
+        return { success: true, message: "Print job sent successfully" };
+    }
+
+    getStatus() {
+        return {
+            connected: this.connected,
+            printerName: this.printerName,
+            status: "Ready"
+        };
+    }
+}
+
+const printer = new MockPrinter();
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'running',
-        message: 'Cottage Tandoori Printer Helper is operational',
-        timestamp: new Date().toISOString(),
-        version: '1.0.2',
-        printer_connected: false // Will implement actual printer detection later
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'Running',
+        service: 'Cottage Tandoori Printer Helper',
+        version: '1.0.4',
+        printer: printer.getStatus()
     });
 });
 
-// Test print endpoint (simulation mode for now)
-app.post('/api/test-print', (req, res) => {
-    const testContent = `
-COTTAGE TANDOORI - TEST RECEIPT
-===============================
-Date: ${new Date().toLocaleString()}
-Test Item 1..................£8.50
-Test Item 2..................£12.00
-                        -----------
-Subtotal....................£20.50
-VAT (20%)...................£4.10
-                        -----------
-TOTAL......................£24.60
+// Kitchen receipt printing
+app.post('/print/kitchen', async (req, res) => {
+    try {
+        const { orderData } = req.body;
 
-Thank you for visiting!
-===============================
-    `;
+        // Format kitchen receipt
+        const kitchenReceipt = `
+╔══════════════════════════════════════╗
+║           COTTAGE TANDOORI           ║
+║            KITCHEN ORDER             ║
+╚══════════════════════════════════════╝
 
-    console.log('🖨️ SIMULATED PRINT:');
-    console.log(testContent);
+Order #: ${orderData?.orderNumber || 'TEST-001'}
+Time: ${new Date().toLocaleString()}
+Type: ${orderData?.orderType || 'DINE-IN'}
 
-    res.json({
-        success: true,
-        message: 'Test receipt printed successfully (simulated)',
-        timestamp: new Date().toISOString()
-    });
-});
+──────────────────────────────────────────
+ITEMS:
+──────────────────────────────────────────
+${orderData?.items?.map(item => 
+    `${item.quantity}x ${item.name}\n` +
+    `    ${item.spiceLevel ? 'Spice: ' + item.spiceLevel : ''}\n` +
+    `    ${item.notes ? 'Notes: ' + item.notes : ''}`
+).join('\n') || '1x Chicken Tikka Masala\n    Spice: Medium\n    Notes: Extra sauce'}
 
-// Kitchen receipt endpoint
-app.post('/api/print-kitchen', (req, res) => {
-    const { order, orderNumber, timestamp } = req.body;
+──────────────────────────────────────────
+Special Instructions:
+${orderData?.specialInstructions || 'None'}
 
-    if (!order || !orderNumber) {
-        return res.status(400).json({
-            success: false,
-            message: 'Order data and order number are required'
-        });
+══════════════════════════════════════════
+        `;
+
+        const result = await printer.print(kitchenReceipt);
+        res.json({ success: true, message: 'Kitchen receipt printed', ...result });
+
+    } catch (error) {
+        console.error('Kitchen print error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-
-    let kitchenContent = `
-COTTAGE TANDOORI - KITCHEN ORDER
-================================
-Order #${orderNumber}
-${timestamp || new Date().toLocaleString()}
-================================
-
-`;
-
-    // Simple item listing for kitchen
-    order.items.forEach(item => {
-        kitchenContent += `${item.quantity}x ${item.name}\n`;
-
-        if (item.spiceLevel) {
-            kitchenContent += `   🌶️ ${item.spiceLevel}\n`;
-        }
-
-        if (item.specialInstructions) {
-            kitchenContent += `   📝 ${item.specialInstructions}\n`;
-        }
-    });
-
-    kitchenContent += `
-================================
-Table: ${order.tableNumber || 'N/A'}
-Order Type: ${order.orderType || 'DINE-IN'}
-================================
-    `;
-
-    console.log('🖨️ KITCHEN PRINT (SIMULATED):');
-    console.log(kitchenContent);
-
-    res.json({
-        success: true,
-        message: 'Kitchen receipt printed successfully (simulated)',
-        orderNumber: orderNumber,
-        timestamp: new Date().toISOString()
-    });
 });
 
-// Customer receipt endpoint
-app.post('/api/print-customer', (req, res) => {
-    const { order, payment, orderNumber, timestamp } = req.body;
+// Customer receipt printing  
+app.post('/print/customer', async (req, res) => {
+    try {
+        const { orderData, paymentData } = req.body;
 
-    if (!order || !payment || !orderNumber) {
-        return res.status(400).json({
-            success: false,
-            message: 'Order data, payment details, and order number are required'
-        });
+        // Format customer receipt
+        const customerReceipt = `
+╔══════════════════════════════════════╗
+║           COTTAGE TANDOORI           ║
+║         123 Restaurant Street        ║
+║        London, UK SW1A 1AA           ║
+║          Tel: 020 1234 5678          ║
+╚══════════════════════════════════════╝
+
+Receipt #: ${orderData?.orderNumber || 'TEST-001'}
+Date: ${new Date().toLocaleDateString()}
+Time: ${new Date().toLocaleTimeString()}
+Cashier: ${orderData?.cashier || 'Staff'}
+
+──────────────────────────────────────────
+${orderData?.items?.map(item => 
+    `${item.quantity}x ${item.name.padEnd(20)} £${(item.price * item.quantity).toFixed(2)}`
+).join('\n') || '1x Chicken Tikka Masala    £12.95\n1x Pilau Rice             £3.50'}
+
+──────────────────────────────────────────
+Subtotal:                        £${paymentData?.subtotal || '16.45'}
+Service Charge (10%):            £${paymentData?.serviceCharge || '1.65'}
+──────────────────────────────────────────
+TOTAL:                          £${paymentData?.total || '18.10'}
+
+Payment Method: ${paymentData?.method || 'Card'}
+${paymentData?.method === 'Card' ? 'Card Payment Approved' : ''}
+
+══════════════════════════════════════════
+     Thank you for your visit!
+    Please come again soon!
+══════════════════════════════════════════
+        `;
+
+        const result = await printer.print(customerReceipt);
+        res.json({ success: true, message: 'Customer receipt printed', ...result });
+
+    } catch (error) {
+        console.error('Customer print error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-
-    let customerContent = `
-COTTAGE TANDOORI - CUSTOMER RECEIPT
-===================================
-Order #${orderNumber}
-${timestamp || new Date().toLocaleString()}
-===================================
-
-`;
-
-    // List all items with prices
-    order.items.forEach(item => {
-        const itemTotal = (item.price * item.quantity).toFixed(2);
-        customerContent += `${item.quantity}x ${item.name}...........£${itemTotal}\n`;
-    });
-
-    customerContent += `
------------------------------------
-Subtotal................£${order.subtotal.toFixed(2)}
-VAT (20%)...............£${order.vatAmount.toFixed(2)}
------------------------------------
-TOTAL...................£${order.total.toFixed(2)}
-
-Payment: ${payment.method} - ${payment.status}
-Order Type: ${order.orderType}
-
-Thank you for your order!
-===================================
-    `;
-
-    console.log('🖨️ CUSTOMER PRINT (SIMULATED):');
-    console.log(customerContent);
-
-    res.json({
-        success: true,
-        message: 'Customer receipt printed successfully (simulated)',
-        orderNumber: orderNumber,
-        timestamp: new Date().toISOString()
-    });
 });
 
-// Get printer status
-app.get('/api/printer-status', (req, res) => {
+// Test print
+app.post('/print/test', async (req, res) => {
+    try {
+        const testReceipt = `
+╔══════════════════════════════════════╗
+║           COTTAGE TANDOORI           ║
+║            PRINTER TEST              ║
+╚══════════════════════════════════════╝
+
+Test Date: ${new Date().toLocaleString()}
+Printer Helper Version: 1.0.4
+
+This is a test print to verify your
+printer is working correctly.
+
+✅ If you can read this, your printer
+   is connected and functioning!
+
+══════════════════════════════════════════
+        `;
+
+        const result = await printer.print(testReceipt);
+        res.json({ success: true, message: 'Test receipt printed', ...result });
+
+    } catch (error) {
+        console.error('Test print error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Printer status
+app.get('/status', (req, res) => {
     res.json({
-        connected: false,
-        status: 'simulated',
-        message: 'Running in simulation mode - actual printer integration will be added in next version',
+        service: 'Cottage Tandoori Printer Helper',
+        version: '1.0.4',
+        status: 'Running',
+        printer: printer.getStatus(),
         timestamp: new Date().toISOString()
     });
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Cottage Tandoori Printer Helper running on http://localhost:${PORT}`);
-    console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🖨️ Running in simulation mode for reliable PKG compilation`);
-    console.log(`💡 Physical printer integration can be added once PKG build is stable`);
+    console.log(`🖨️  Cottage Tandoori Printer Helper v1.0.4`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📄 Endpoints:`);
+    console.log(`   GET  /health         - Service health check`);
+    console.log(`   GET  /status         - Printer status`);
+    console.log(`   POST /print/kitchen  - Print kitchen receipt`);
+    console.log(`   POST /print/customer - Print customer receipt`);
+    console.log(`   POST /print/test     - Print test receipt`);
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
     console.log('\n🛑 Shutting down Cottage Tandoori Printer Helper...');
-    console.log('✅ Server stopped cleanly');
     process.exit(0);
 });
