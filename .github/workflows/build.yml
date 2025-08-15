@@ -56,8 +56,12 @@ jobs:
         uses: actions/download-artifact@v4
 
       - name: Create Release
-        uses: ncipollo/create-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          artifacts: "cottage-tandoori-helper-windows.exe/cottage-tandoori-helper-windows.exe,cottage-tandoori-helper-mac/cottage-tandoori-helper-mac,cottage-tandoori-helper-linux/cottage-tandoori-helper-linux"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          generateReleaseNotes: true
+          files: |
+            cottage-tandoori-helper-windows.exe/cottage-tandoori-helper-windows.exe
+            cottage-tandoori-helper-mac/cottage-tandoori-helper-mac
+            cottage-tandoori-helper-linux/cottage-tandoori-helper-linux
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
