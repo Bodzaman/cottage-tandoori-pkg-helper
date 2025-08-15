@@ -1,22 +1,19 @@
 {
   "name": "cottage-tandoori-pkg-helper",
-  "version": "1.0.0",
-  "description": "Modern Node.js PKG-based printer helper for Cottage Tandoori Restaurant",
+  "version": "1.0.2",
+  "description": "Simplified PKG-based printer helper for Cottage Tandoori Restaurant",
   "main": "index.js",
   "bin": "./index.js",
   "scripts": {
     "start": "node index.js",
-    "build": "pkg . --targets node18-linux-x64,node18-win-x64,node18-macos-x64 --compress Brotli",
-    "test": "node test-printer.js",
-    "dev": "node index.js"
+    "build": "pkg . --targets node18-linux-x64,node18-win-x64,node18-macos-x64 --compress Brotli --out-path dist",
+    "test": "node index.js"
   },
   "pkg": {
     "scripts": [
       "index.js"
     ],
-    "assets": [
-      "package.json"
-    ],
+    "assets": [],
     "targets": [
       "node18-linux-x64",
       "node18-win-x64",
@@ -26,11 +23,7 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "serialport": "^12.0.0",
-    "escpos": "^3.0.0-alpha.6",
-    "escpos-usb": "^2.0.0-alpha.4",
-    "body-parser": "^1.20.2"
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "pkg": "^5.8.1"
@@ -41,12 +34,9 @@
   "keywords": [
     "pos",
     "printer",
-    "epson",
-    "escpos",
     "restaurant",
     "cottage-tandoori",
-    "pkg",
-    "executable"
+    "pkg"
   ],
   "author": "Cottage Tandoori Restaurant",
   "license": "MIT"
